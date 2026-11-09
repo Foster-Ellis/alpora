@@ -19,12 +19,15 @@ ColumnLayout {
     readonly property real safeTop: (Session.settings.bar ? Session.settings.bar.top + Session.settings.bar.height : 52) + 20
     readonly property var chosen: config[selected]
     readonly property var selectedBox: Geometry.bounds(selected, chosen, screenWidth, screenHeight, safeTop)
+    // Keep a usable slice of the scrolling list above the pinned footer; the
+    // settings window scrolls the page when it is shorter than this.
+    readonly property real minimumPageHeight: 220 + spacing + footer.implicitHeight
     spacing: 12
     Component.onCompleted: WidgetState.begin()
     function title(kind: string): string { return kind === "clock" ? "Часы" : kind === "weather" ? "Погода" : "Музыка"; }
     ScrollView {
         id: scroll
-        Layout.fillWidth: true; Layout.fillHeight: true
+        Layout.fillWidth: true; Layout.fillHeight: true; Layout.minimumHeight: 220
         clip: true; contentWidth: availableWidth
         ColumnLayout {
             width: scroll.availableWidth; spacing: 12
@@ -194,6 +197,7 @@ ColumnLayout {
         }
     }
     RowLayout {
+        id: footer
         Layout.fillWidth: true; spacing: 10
         Text { Layout.fillWidth: true; text: WidgetState.error || WidgetState.message || (WidgetState.dirty ? "Есть несохранённые изменения" : "Всё сохранено"); color: Session.muted; font.family: Session.fontFamily; font.pixelSize: 11; wrapMode: Text.Wrap }
         AppearanceButton { text: "Отменить"; symbol: "close"; enabled: !WidgetState.busy && (WidgetState.dirty || !!WidgetState.error); onClicked: WidgetState.cancel() }

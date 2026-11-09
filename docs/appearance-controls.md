@@ -12,10 +12,15 @@ desktop launcher is `~/.local/share/applications/poly-shell-settings.desktop`.
 The quick-settings Settings button closes the popup and calls `poly-shell settings`.
 Subsequent calls focus the same window. Launches are serialized by a runtime lock.
 
-The installed Hyprland rule floats and centers the app at 1100×800 logical pixels;
-QML also sets both minimum and maximum sizes to 1100×800. The header can be dragged.
-This size is verified on the current 1920×1080, scale-1 display. Smaller work areas
-and larger display scales are not validated for this fixed-size application.
+The app is an ordinary application window. Hyprland tiles it like any other
+client; it can be floated with the usual bind, moved with `Super`+drag or by
+dragging its header, resized, maximized and fullscreened. 1100×800 logical pixels
+is only its preferred size when floated. The minimum size, 640×480, fits a
+1366×768 work area. The sidebar scrolls whenever its entries do not fit above the
+pinned theme card, and a page shorter than the window scrolls as a whole instead
+of clipping. Narrow windows (such as a tiled half-screen) stack the overview,
+appearance and theme cards into one column. No Hyprland window rule is installed
+for the app; `poly-shell appearance install` removes the earlier managed rule.
 
 ## Settings center update — 2026-10-20
 
@@ -56,6 +61,11 @@ restores the separate floating window instead of creating a duplicate. Explicit
 forced maximize, fullscreen and resize attempts were tested: final size 1100×800,
 floating true, fullscreen/client state 0. No global key bindings were modified.
 Installation upgrades the exact old managed rule and backs it up.
+
+Superseded: the fixed geometry above was removed when the app became a normal
+window. `poly-shell appearance install` now removes the exact managed rule
+(either the version above or the earlier float/size/center version) after backing
+up `hyprland.lua`. A rule edited by hand is left alone.
 
 Validation: 62 Python tests passed; all changed QML and new components lint with
 zero warnings. The full-project lint still reports the pre-existing PostReloadHook

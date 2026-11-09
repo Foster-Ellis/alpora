@@ -15,7 +15,6 @@ import Quickshell.Hyprland
 ShellRoot {
     id: root
     property bool confirmClose: false
-    property bool restoringWindow: false
     property string page: "overview"
     property string statusMessage: ""
     property var monitors: []
@@ -42,35 +41,17 @@ ShellRoot {
         if (AppearanceState.dirty || ThemeState.dirty || WidgetState.dirty || ShortcutsState.dirty || ShortcutsState.editingForm) root.confirmClose = true;
         else Qt.quit();
     }
-    function restoreWindow(): void {
-        if (!Hyprland.usingLua || root.restoringWindow) return;
-        root.restoringWindow = true;
-        geometryRestore.restart();
-    }
-    Timer {
-        id: geometryRestore
-        interval: 0
-        onTriggered: {
-            Hyprland.dispatch('hl.dsp.window.fullscreen_state({window="class:^poly-shell-settings$",action="set",internal=0,client=0})');
-            Hyprland.dispatch('hl.dsp.window.float({window="class:^poly-shell-settings$",action="set"})');
-            Hyprland.dispatch('hl.dsp.window.resize({window="class:^poly-shell-settings$",x=1100,y=800,relative=false})');
-            settingsWindow.maximized = false;
-            settingsWindow.fullscreen = false;
-            geometryCooldown.restart();
-        }
-    }
-    Timer {
-        id: geometryCooldown; interval: 200
-        onTriggered: {
-            root.restoringWindow = false;
-            if (settingsWindow.maximized || settingsWindow.fullscreen) root.restoreWindow();
-        }
-    }
     function show(): void {
         settingsWindow.visible = true;
         settingsWindow.minimized = false;
-        root.restoreWindow();
         Hyprland.dispatch(Hyprland.usingLua ? 'hl.dsp.focus({ window = "class:^poly-shell-settings$" })' : 'focuswindow class:^poly-shell-settings$');
+    }
+    // Header drag moves the window like a title bar. A DragHandler starts the move
+    // only past the drag threshold, so plain clicks are never turned into a
+    // compositor grab. A maximized or fullscreen window stays where it is.
+    function moveWindow(): void {
+        if (settingsWindow.maximized || settingsWindow.fullscreen) return;
+        settingsWindow.startSystemMove();
     }
     function setWallpaper(path: string): void {
         if (wallpaperWriter.running) return;
@@ -120,12 +101,13 @@ ShellRoot {
         // qmllint enable uncreatable-type
         id: settingsWindow
         title: "Настройки · ALPORA"
+        // A normal application window: the compositor tiles, floats, maximizes or
+        // fullscreens it. 1100x800 is only the preferred size when floated; the
+        // minimum still fits a 1366x768 work area and pages scroll below their
+        // natural height instead of clipping.
         implicitWidth: 1100; implicitHeight: 800
-        minimumSize: Qt.size(1100, 800); maximumSize: Qt.size(1100, 800)
+        minimumSize: Qt.size(640, 480)
         color: "transparent"; visible: true
-        maximized: false; fullscreen: false
-        onMaximizedChanged: if (maximized) root.restoreWindow()
-        onFullscreenChanged: if (fullscreen) root.restoreWindow()
         onClosed: {
             if (AppearanceState.busy || ThemeState.busy || WidgetState.busy || ShortcutsState.busy || AppearanceState.dirty || ThemeState.dirty || WidgetState.dirty || ShortcutsState.dirty || ShortcutsState.editingForm || wallpaperWriter.running) { visible = true; if (!AppearanceState.busy && !ThemeState.busy && !WidgetState.busy && !ShortcutsState.busy && !wallpaperWriter.running) root.confirmClose = true; }
             else Qt.quit();
@@ -146,7 +128,7 @@ ShellRoot {
                     anchors.fill: parent; anchors.margins: 14; spacing: 10
                     Item {
                         Layout.fillWidth: true; Layout.preferredHeight: 70
-                        MouseArea { anchors.fill: parent; onPressed: settingsWindow.startSystemMove() }
+                        DragHandler { target: null; onActiveChanged: if (active) root.moveWindow() }
                         Row {
                             x: 11; y: 17; spacing: 14
                             FacetedMark { width: 31; height: 34 }
@@ -169,10 +151,16 @@ ShellRoot {
                     }
                     ScrollView {
                         id: navScroll
-                        Layout.fillWidth: true; Layout.fillHeight: true
-                        contentWidth: availableWidth; clip: true
+                        // Entries scroll above the pinned theme card. When they overflow, the
+                        // bar stays visible and has its own lane so no entry is unreachable.
+                        readonly property bool overflowing: navColumn.implicitHeight > availableHeight
+                        Layout.fillWidth: true; Layout.fillHeight: true; Layout.minimumHeight: 0
+                        contentWidth: availableWidth; contentHeight: navColumn.implicitHeight; clip: true
+                        rightPadding: overflowing ? ScrollBar.vertical.width + 4 : 0
                         ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                        ScrollBar.vertical.policy: overflowing ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff
                         Column {
+                            id: navColumn
                             width: navScroll.availableWidth; spacing: 2
                             Repeater {
                                 model: root.navigation
@@ -213,28 +201,51 @@ ShellRoot {
                 Layout.fillWidth: true; Layout.fillHeight: true; Layout.margins: 24; spacing: 16
                 Item {
                     Layout.fillWidth: true; Layout.preferredHeight: 90
-                    Image { anchors.right: parent.right; anchors.bottom: parent.bottom; width: 460; height: 90; source: Session.appearance.ridge ? "file://" + Session.appearance.ridge : "file://" + Quickshell.env("POLY_SHELL_ASSETS") + "/settings-ridge.svg"; fillMode: Image.PreserveAspectFit; verticalAlignment: Image.AlignBottom; opacity: 0.85 }
-                    MouseArea { anchors.fill: parent; onPressed: settingsWindow.startSystemMove() }
+                    // The decorative ridge gives way to the title on narrow windows.
+                    Image { anchors.right: parent.right; anchors.bottom: parent.bottom; width: Math.min(460, Math.max(0, parent.width - Math.max(pageTitleText.implicitWidth, pageSubtitleText.implicitWidth) - 32)); height: 90; source: Session.appearance.ridge ? "file://" + Session.appearance.ridge : "file://" + Quickshell.env("POLY_SHELL_ASSETS") + "/settings-ridge.svg"; fillMode: Image.PreserveAspectFit; verticalAlignment: Image.AlignBottom; opacity: 0.85 }
+                    Item { anchors.fill: parent; DragHandler { target: null; onActiveChanged: if (active) root.moveWindow() } }
                     Column {
-                        y: 8; spacing: 8
-                        Text { text: root.pageTitle; color: PolyTheme.Theme.color("#f2f3f6"); font.family: Session.fontFamily; font.pixelSize: 28; font.weight: Font.Medium }
-                        Text { text: root.page === "overview" ? "Твой рабочий стол — под тебя" : root.page === "wallpaper" ? "Выбери пейзаж — получи свою палитру" : root.page === "appearance" ? "Настрой каждый элемент под себя" : "Настрой всё так, как удобно тебе"; color: PolyTheme.Theme.color("#bdc6d2"); font.family: Session.fontFamily; font.pixelSize: 13 }
+                        y: 8; width: parent.width - 48; spacing: 8
+                        Text { id: pageTitleText; width: parent.width; elide: Text.ElideRight; text: root.pageTitle; color: PolyTheme.Theme.color("#f2f3f6"); font.family: Session.fontFamily; font.pixelSize: 28; font.weight: Font.Medium }
+                        Text { id: pageSubtitleText; width: parent.width; elide: Text.ElideRight; text: root.page === "overview" ? "Твой рабочий стол — под тебя" : root.page === "wallpaper" ? "Выбери пейзаж — получи свою палитру" : root.page === "appearance" ? "Настрой каждый элемент под себя" : "Настрой всё так, как удобно тебе"; color: PolyTheme.Theme.color("#bdc6d2"); font.family: Session.fontFamily; font.pixelSize: 13 }
                     }
                     IconButton { anchors.right: parent.right; anchors.top: parent.top; symbol: "close"; hint: "Закрыть настройки"; onClicked: root.close() }
                     Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: PolyTheme.Theme.color("#34545e62") }
                 }
-                SettingsOverview { Layout.fillWidth: true; Layout.fillHeight: true; visible: root.page === "overview"; monitors: root.monitors; wallpaper: root.wallpaperUrl; onNavigate: page => root.navigate(page) }
-                Loader { Layout.fillWidth: true; Layout.fillHeight: true; visible: root.page === "appearance"; active: visible; sourceComponent: SettingsAppearance { wallpaper: root.wallpaperUrl } }
-                Loader { Layout.fillWidth: true; Layout.fillHeight: true; visible: root.page === "widgets"; active: visible; sourceComponent: SettingsWidgets { wallpaper: root.wallpaperUrl } }
-                Loader { Layout.fillWidth: true; Layout.fillHeight: true; visible: root.page === "input"; active: visible; sourceComponent: SettingsShortcuts {} }
-                ThemePage { Layout.fillWidth: true; Layout.fillHeight: true; visible: root.page === "wallpaper"; onImportRequested: wallpaperDialog.open() }
-                SettingsDetails {
-                    Layout.fillWidth: true; Layout.fillHeight: true
-                    visible: !["overview", "appearance", "wallpaper", "widgets", "input"].includes(root.page)
-                    page: root.page; monitors: root.monitors; wallpaper: root.wallpaperUrl
-                    onNavigate: page => root.navigate(page)
-                    onChooseWallpaper: wallpaperDialog.open()
-                    onRestoreWallpaper: root.setWallpaper("--reset")
+                ScrollView {
+                    id: pageScroll
+                    // Pages fill the window and keep their own inner scrolling. When the window
+                    // is shorter than a page's minimumPageHeight, the whole page scrolls instead
+                    // of squeezing or clipping its controls.
+                    readonly property bool overflowing: pageStack.minimumPageHeight > availableHeight
+                    Layout.fillWidth: true; Layout.fillHeight: true; Layout.minimumHeight: 0
+                    contentWidth: availableWidth; contentHeight: pageStack.height; clip: true
+                    rightPadding: overflowing ? ScrollBar.vertical.width + 6 : 0
+                    ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                    ScrollBar.vertical.policy: overflowing ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff
+                    Item {
+                        id: pageStack
+                        readonly property real minimumPageHeight: root.page === "overview" ? overviewPage.minimumPageHeight
+                            : root.page === "appearance" ? ((appearanceLoader.item as SettingsAppearance)?.minimumPageHeight ?? 0)
+                            : root.page === "widgets" ? ((widgetsLoader.item as SettingsWidgets)?.minimumPageHeight ?? 0)
+                            : root.page === "input" ? ((shortcutsLoader.item as SettingsShortcuts)?.minimumPageHeight ?? 0)
+                            : root.page === "wallpaper" ? themePage.minimumPageHeight : 0
+                        width: pageScroll.availableWidth
+                        height: Math.max(pageScroll.availableHeight, minimumPageHeight)
+                        SettingsOverview { id: overviewPage; anchors.fill: parent; visible: root.page === "overview"; monitors: root.monitors; wallpaper: root.wallpaperUrl; onNavigate: page => root.navigate(page) }
+                        Loader { id: appearanceLoader; anchors.fill: parent; visible: root.page === "appearance"; active: visible; sourceComponent: SettingsAppearance { wallpaper: root.wallpaperUrl } }
+                        Loader { id: widgetsLoader; anchors.fill: parent; visible: root.page === "widgets"; active: visible; sourceComponent: SettingsWidgets { wallpaper: root.wallpaperUrl } }
+                        Loader { id: shortcutsLoader; anchors.fill: parent; visible: root.page === "input"; active: visible; sourceComponent: SettingsShortcuts {} }
+                        ThemePage { id: themePage; anchors.fill: parent; visible: root.page === "wallpaper"; onImportRequested: wallpaperDialog.open() }
+                        SettingsDetails {
+                            anchors.fill: parent
+                            visible: !["overview", "appearance", "wallpaper", "widgets", "input"].includes(root.page)
+                            page: root.page; monitors: root.monitors; wallpaper: root.wallpaperUrl
+                            onNavigate: page => root.navigate(page)
+                            onChooseWallpaper: wallpaperDialog.open()
+                            onRestoreWallpaper: root.setWallpaper("--reset")
+                        }
+                    }
                 }
                 Text { Layout.fillWidth: true; visible: !!(root.statusMessage || Desktop.error || Session.error); text: root.statusMessage || Desktop.error || Session.error; color: PolyTheme.Theme.color("#e8c3aa"); font.family: Session.fontFamily; font.pixelSize: 11; wrapMode: Text.Wrap }
             }

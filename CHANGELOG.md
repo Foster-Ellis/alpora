@@ -2,6 +2,7 @@
 
 ## Unreleased — ALPORA preview
 
+- Made the settings app a normal application window: it tiles, floats, resizes, maximizes and fullscreens like any app, its sidebar and pages scroll instead of clipping, narrow windows stack the cards, and `poly-shell appearance install` now removes the old fixed-size window rule.
 - Validated production configuration in isolated UID 1000/1001 profiles, real asset downloads, spaced paths, repeat setup and a separate software Wayland display; documented the remaining clean-OS gate.
 - Fixed first-start QIcon worker loading in launcher/dock, enabling active-but-disabled network/Bluetooth services, and preflighting settings-launcher conflicts before installation writes.
 

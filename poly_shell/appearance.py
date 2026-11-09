@@ -27,6 +27,9 @@ do
 end
 -- END POLY SHELL APPEARANCE
 '''
+# Earlier installs pinned the settings app to a fixed floating 1100x800 window.
+# It is now a normal application window, so install removes these exact managed
+# texts and leaves any hand-edited settings rule alone.
 LEGACY_SETTINGS_RULE = '''-- Poly Shell settings: an independent, movable application window.
 hl.window_rule({
     name = "poly-settings-window",
@@ -139,10 +142,8 @@ def install_hook(paths):
             updated = original
         else:
             updated = original.rstrip() + "\n\n" + HOOK
-        if LEGACY_SETTINGS_RULE in updated:
-            updated = updated.replace(LEGACY_SETTINGS_RULE, SETTINGS_RULE)
-        if 'name = "poly-settings-window"' not in updated:
-            updated = updated.rstrip() + "\n\n" + SETTINGS_RULE
+        for rule in (SETTINGS_RULE, LEGACY_SETTINGS_RULE):
+            updated = remove_block(updated, rule)
         if LEGACY_PANEL_RULE in updated:
             updated = updated.replace(LEGACY_PANEL_RULE, PANEL_RULE)
         if CACHED_PANEL_RULE in updated:
@@ -160,6 +161,19 @@ def install_hook(paths):
         atomic_text(generated_path(paths), lua_for(visual_for(paths)))
         atomic_text(target, updated)
         return {"installed": True, "backup": str(backup)}
+
+
+def remove_block(text, block):
+    """Remove an exact managed block and the blank separator install added before it."""
+    while block in text:
+        start = text.find(block)
+        before, after = text[:start], text[start + len(block):]
+        if not after.strip():
+            before, after = (before.rstrip("\n") + "\n") if before.strip() else "", ""
+        elif before.endswith("\n\n") and after.startswith("\n"):
+            after = after[1:]
+        text = before + after
+    return text
 
 
 def atomic_text(path, text):

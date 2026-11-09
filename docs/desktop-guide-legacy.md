@@ -215,8 +215,9 @@ for conflicts, backed up and applied with rollback on failure. Unsupported callb
 submaps and mouse gestures stay in the original configuration. See the
 [shortcut editor guide](shortcuts.md).
 
-The quick-settings **Настройки** button opens an independent, centered floating
-application (1100×800 logical pixels, fixed size). It is also available as
+The quick-settings **Настройки** button opens an independent application window
+that Hyprland tiles like any other app; it can be floated, moved, resized,
+maximized or fullscreened. It is also available as
 **Настройки Poly** in the launcher, or through `poly-shell settings`. Reopening
 focuses the existing window. A separate user unit keeps it independent of bar
 restarts; closing the app exits that unit.
@@ -239,8 +240,8 @@ See [appearance controls and validation](appearance-controls.md).
 
 Visual controls are stored in `~/.config/poly-shell/visual.json`, independently
 of Work/Vibe and the theme manifest. `poly-shell appearance install` installs a
-backed-up Lua include and the application's floating-window rule in the existing
-Hyprland Lua configuration. `poly-shell install` installs the application launcher.
+backed-up Lua include in the existing Hyprland Lua configuration and removes the
+settings floating-window rule that earlier versions added. `poly-shell install` installs the application launcher.
 
 ```sh
 poly-shell mode               # Current mode

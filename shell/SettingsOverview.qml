@@ -11,16 +11,20 @@ ColumnLayout {
     property var monitors: []
     property url wallpaper: "file://" + Quickshell.env("POLY_SHELL_ASSETS") + "/wallpapers/alpine-dawn.png"
     readonly property string powerLabel: ({"power-saver": "Энергосбережение", balanced: "Сбалансированный режим", performance: "Производительность"})[Desktop.data.powerProfile] || "Профили недоступны"
+    // Narrow windows (a tiled half-screen) stack the cards in one column; the
+    // settings window scrolls the page when it is shorter than this height.
+    readonly property bool compact: width < 620
+    readonly property real minimumPageHeight: implicitHeight
     spacing: 12
-    RowLayout {
-        Layout.fillWidth: true; Layout.preferredHeight: 65; spacing: 12
-        SettingsTile { Layout.fillWidth: true; Layout.fillHeight: true; padding: 12; title: Session.mode === "vibe" ? "Vibe" : "Work"; subtitle: "Текущий режим"; symbol: "monitor"; tint: PolyTheme.Theme.color("#edb493"); onClicked: root.navigate("modes") }
-        SettingsTile { Layout.fillWidth: true; Layout.fillHeight: true; padding: 12; title: PolyTheme.Theme.label; subtitle: "Тема оформления"; symbol: "gem"; onClicked: root.navigate("appearance") }
+    GridLayout {
+        Layout.fillWidth: true; columns: root.compact ? 1 : 2; columnSpacing: 12; rowSpacing: 12
+        SettingsTile { Layout.fillWidth: true; Layout.preferredHeight: 65; padding: 12; title: Session.mode === "vibe" ? "Vibe" : "Work"; subtitle: "Текущий режим"; symbol: "monitor"; tint: PolyTheme.Theme.color("#edb493"); onClicked: root.navigate("modes") }
+        SettingsTile { Layout.fillWidth: true; Layout.preferredHeight: 65; padding: 12; title: PolyTheme.Theme.label; subtitle: "Тема оформления"; symbol: "gem"; onClicked: root.navigate("appearance") }
     }
-    RowLayout {
-        Layout.fillWidth: true; Layout.preferredHeight: 99; spacing: 12
+    GridLayout {
+        Layout.fillWidth: true; columns: root.compact ? 1 : 2; columnSpacing: 12; rowSpacing: 12
         SettingsTile {
-            Layout.fillWidth: true; Layout.fillHeight: true
+            Layout.fillWidth: true; Layout.preferredHeight: 99
             title: "Wi-Fi"; symbol: "wifi"
             subtitle: Session.wifiNetwork ? Session.wifiNetwork.name : Session.wifiEnabled ? "Нет подключения" : "Выключен"
             detail: Session.wifiNetwork ? "●  Подключено" : ""
@@ -28,7 +32,7 @@ ColumnLayout {
             onClicked: root.navigate("wifi"); onToggleRequested: Session.toggleWifi()
         }
         SettingsTile {
-            Layout.fillWidth: true; Layout.fillHeight: true
+            Layout.fillWidth: true; Layout.preferredHeight: 99
             title: "Bluetooth"; symbol: "bluetooth"; tint: PolyTheme.Theme.color("#9cc8df")
             subtitle: Session.bluetoothEnabled ? "Включён" : "Выключен"
             detail: Session.bluetoothAdapter ? "Подключено: " + Session.bluetoothAdapter.devices.values.filter(d => d.connected).length : "Адаптер не найден"
@@ -36,10 +40,10 @@ ColumnLayout {
             onClicked: root.navigate("bluetooth"); onToggleRequested: Session.toggleBluetooth()
         }
     }
-    RowLayout {
-        Layout.fillWidth: true; Layout.preferredHeight: 146; spacing: 12
+    GridLayout {
+        Layout.fillWidth: true; columns: root.compact ? 1 : 2; columnSpacing: 12; rowSpacing: 12
         SettingsCard {
-            Layout.fillWidth: true; Layout.fillHeight: true
+            Layout.fillWidth: true; Layout.preferredHeight: 146
             TapHandler { onTapped: root.navigate("monitors") }
             HoverHandler { cursorShape: Qt.PointingHandCursor }
             RowLayout {
@@ -49,7 +53,7 @@ ColumnLayout {
                     Layout.fillWidth: true; spacing: 5
                     Text { text: "Мониторы"; color: PolyTheme.Theme.color("#eff1f5"); font.family: Session.fontFamily; font.pixelSize: 15; font.weight: Font.DemiBold }
                     Row {
-                        spacing: 7
+                        Layout.fillWidth: true; clip: true; spacing: 7
                         Repeater {
                             model: root.monitors
                             Rectangle {
@@ -66,7 +70,7 @@ ColumnLayout {
             }
         }
         SettingsCard {
-            Layout.fillWidth: true; Layout.fillHeight: true
+            Layout.fillWidth: true; Layout.preferredHeight: 146
             RowLayout {
                 Layout.fillWidth: true; Layout.fillHeight: true; spacing: 15
                 SettingsBadge { symbol: "volume"; tint: PolyTheme.Theme.color("#edb493"); Layout.alignment: Qt.AlignTop }
@@ -90,17 +94,18 @@ ColumnLayout {
         }
     }
     SettingsCard {
-        Layout.fillWidth: true; Layout.fillHeight: true; Layout.minimumHeight: 168
+        Layout.fillWidth: true; Layout.fillHeight: true; Layout.minimumHeight: Math.max(168, implicitHeight)
         RowLayout {
             Layout.fillWidth: true; spacing: 12
             Icon { name: "wallpaper"; Layout.preferredWidth: 22; Layout.preferredHeight: 22 }
             Text { Layout.fillWidth: true; text: "Рабочий стол"; color: PolyTheme.Theme.color("#eff1f5"); font.family: Session.fontFamily; font.pixelSize: 15; font.weight: Font.DemiBold }
             ToolButton { Accessible.name: "Открыть обои"; implicitWidth: 22; implicitHeight: 22; background: Item {} contentItem: Icon { name: "chevron-right" } onClicked: root.navigate("wallpaper") }
         }
-        RowLayout {
-            Layout.fillWidth: true; Layout.fillHeight: true; spacing: 20
+        GridLayout {
+            Layout.fillWidth: true; Layout.fillHeight: true; columns: root.compact ? 1 : 2; columnSpacing: 20; rowSpacing: 14
             Rectangle {
-                Layout.preferredWidth: 290; Layout.fillHeight: true; Layout.minimumHeight: 91
+                Layout.preferredWidth: root.compact ? -1 : 290; Layout.fillWidth: root.compact
+                Layout.fillHeight: true; Layout.minimumHeight: root.compact ? 120 : 91
                 radius: 11; color: PolyTheme.Theme.color("#3b4145"); clip: true
                 SettingsImage { anchors.fill: parent; source: root.wallpaper; sourceSize: Qt.size(580, 240) }
                 TapHandler { onTapped: root.navigate("wallpaper") }
@@ -119,10 +124,10 @@ ColumnLayout {
             }
         }
     }
-    RowLayout {
-        Layout.fillWidth: true; Layout.preferredHeight: 78; spacing: 12
-        SettingsTile { Layout.fillWidth: true; Layout.fillHeight: true; padding: 12; title: "Питание"; subtitle: root.powerLabel; symbol: "battery"; onClicked: root.navigate("power") }
-        SettingsTile { Layout.fillWidth: true; Layout.fillHeight: true; padding: 12; title: "Уведомления"; subtitle: Desktop.data.dnd ? "Не беспокоить" : "Приложения и поведение"; symbol: "bell"; tint: PolyTheme.Theme.color("#edb493"); onClicked: root.navigate("notifications") }
-        SettingsTile { Layout.fillWidth: true; Layout.fillHeight: true; padding: 12; title: "Устройства"; subtitle: "Подключения и периферия"; symbol: "devices"; tint: PolyTheme.Theme.color("#9cc8df"); onClicked: root.navigate("devices") }
+    GridLayout {
+        Layout.fillWidth: true; columns: root.compact ? 1 : 3; columnSpacing: 12; rowSpacing: 12
+        SettingsTile { Layout.fillWidth: true; Layout.preferredHeight: 78; padding: 12; title: "Питание"; subtitle: root.powerLabel; symbol: "battery"; onClicked: root.navigate("power") }
+        SettingsTile { Layout.fillWidth: true; Layout.preferredHeight: 78; padding: 12; title: "Уведомления"; subtitle: Desktop.data.dnd ? "Не беспокоить" : "Приложения и поведение"; symbol: "bell"; tint: PolyTheme.Theme.color("#edb493"); onClicked: root.navigate("notifications") }
+        SettingsTile { Layout.fillWidth: true; Layout.preferredHeight: 78; padding: 12; title: "Устройства"; subtitle: "Подключения и периферия"; symbol: "devices"; tint: PolyTheme.Theme.color("#9cc8df"); onClicked: root.navigate("devices") }
     }
 }
