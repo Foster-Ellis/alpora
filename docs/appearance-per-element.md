@@ -1,8 +1,8 @@
 # Appearance by element — 2026-10-21
 
 Implemented from `assets/reference/appearance-per-element-proposal-v1.png`.
-Open **Settings → Внешний вид**. The existing 1100×800 floating settings
-application now selects Windows, Bar, Menus, Widgets, Launcher or Notifications.
+Open **Settings → Внешний вид**. The settings application now
+selects Windows, Bar, Menus, Widgets, Launcher or Notifications.
 Controls accept sliders and typed numbers. A theme-aware preview follows the
 draft; light/dark buttons change only its backdrop. The fixed footer remains
 visible while the control list scrolls. Changing elements returns the list to top.

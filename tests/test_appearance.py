@@ -172,19 +172,59 @@ class AppearanceTests(unittest.TestCase):
             appearance.install_hook(self.paths)
         self.assertEqual(config.read_bytes(), edited)
 
-    def test_settings_rule_upgrade_locks_size_and_preserves_other_config(self):
+    def test_fresh_install_adds_no_settings_window_rule(self):
         config = self.paths.config.parent / "hypr/hyprland.lua"
         config.parent.mkdir(parents=True)
-        original = "-- personal bindings\n" + appearance.HOOK + "\n" + appearance.LEGACY_SETTINGS_RULE
-        config.write_text(original)
-        result = appearance.install_hook(self.paths)
-        self.assertEqual(Path(result["backup"]).read_text(), original)
+        config.write_text("-- user config\n")
+        appearance.install_hook(self.paths)
         updated = config.read_text()
-        self.assertTrue(updated.startswith("-- personal bindings\n"))
-        self.assertIn(appearance.SETTINGS_RULE, updated)
-        self.assertIn('min_size = { 1100, 800 }', updated)
-        self.assertIn('max_size = { 1100, 800 }', updated)
-        self.assertIn('suppress_event = "maximize fullscreen fullscreenoutput"', updated)
+        self.assertNotIn("poly-settings-window", updated)
+        self.assertNotIn("poly-shell-settings", updated)
+        appearance.install_hook(self.paths)
+        self.assertEqual(config.read_text(), updated)
+
+    def test_install_removes_managed_settings_rules_and_preserves_other_config(self):
+        config = self.paths.config.parent / "hypr/hyprland.lua"
+        config.parent.mkdir(parents=True)
+        for label, rule in (("current", appearance.SETTINGS_RULE), ("legacy", appearance.LEGACY_SETTINGS_RULE)):
+            with self.subTest(rule=label):
+                # The layout an earlier install produced, with user lines on both sides.
+                original = ("-- personal bindings\n\n" + appearance.HOOK + "\n" + rule
+                            + "\n" + appearance.PANEL_RULE + "\n" + appearance.THEME_REVEAL_RULE
+                            + "\n-- trailing user line\n")
+                config.write_text(original)
+                result = appearance.install_hook(self.paths)
+                self.assertEqual(Path(result["backup"]).read_text(), original)
+                updated = config.read_text()
+                self.assertEqual(updated, original.replace(rule + "\n", ""))
+                self.assertNotIn("poly-settings-window", updated)
+                self.assertIn(appearance.HOOK, updated)
+                self.assertIn(appearance.PANEL_RULE, updated)
+                self.assertTrue(updated.startswith("-- personal bindings\n"))
+                self.assertTrue(updated.endswith("-- trailing user line\n"))
+                self.assertEqual(appearance.install_hook(self.paths), {"installed": True})
+                self.assertEqual(config.read_text(), updated)
+
+    def test_managed_settings_rule_at_end_of_file_is_removed_cleanly(self):
+        config = self.paths.config.parent / "hypr/hyprland.lua"
+        config.parent.mkdir(parents=True)
+        config.write_text("-- user config\n\n" + appearance.HOOK + "\n" + appearance.PANEL_RULE
+                          + "\n" + appearance.THEME_REVEAL_RULE + "\n" + appearance.SETTINGS_RULE)
+        appearance.install_hook(self.paths)
+        self.assertEqual(config.read_text(), "-- user config\n\n" + appearance.HOOK + "\n"
+                         + appearance.PANEL_RULE + "\n" + appearance.THEME_REVEAL_RULE)
+
+    def test_hand_edited_settings_rule_is_left_alone(self):
+        config = self.paths.config.parent / "hypr/hyprland.lua"
+        config.parent.mkdir(parents=True)
+        edited = appearance.SETTINGS_RULE.replace("size = { 1100, 800 },\n    min_size", "size = { 900, 700 },\n    min_size")
+        self.assertNotEqual(edited, appearance.SETTINGS_RULE)
+        original = "-- personal bindings\n\n" + appearance.HOOK + "\n" + edited
+        config.write_text(original)
+        appearance.install_hook(self.paths)
+        updated = config.read_text()
+        self.assertIn(edited, updated)
+        self.assertEqual(updated.count("poly-settings-window"), 1)
         appearance.install_hook(self.paths)
         self.assertEqual(config.read_text(), updated)
 

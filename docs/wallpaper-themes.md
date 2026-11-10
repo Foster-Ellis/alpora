@@ -16,7 +16,7 @@ Settings → Themes and wallpapers displays two columns of cards, a draft deskto
 preview, swatches and the “Colors from wallpaper” switch. Selection changes only
 the preview. Apply changes the image and palette together. Cancel discards the
 draft; closing with a draft asks before discarding. The settings application stays
-an independent, fixed 1100×800 floating window.
+an independent application window.
 
 “Own wallpaper” imports a PNG/JPEG/WebP, validates/decodes it using Pillow, copies
 it to the private `~/.config/poly-shell/wallpapers` directory and extracts a
@@ -104,6 +104,7 @@ The generated appearance include also sources the saved border palette on reload
 - Closing/reopening settings retained Moon Lake and the same independent renderer.
   Repeated forced maximize/fullscreen attempts return to 1100×800. The restoration
   handler is deferred and guarded, with a cooldown check to cover startup races.
+  (That handler was later removed: the app is now a normal, resizable window.)
 - A settled 2-second observation measured one CPU tick (~0.5% of a CPU core) for
   the settings process; this is a short idle sample, not an interaction benchmark.
   No forced redraw, repeated palette sampling or continuous blur preview exists.

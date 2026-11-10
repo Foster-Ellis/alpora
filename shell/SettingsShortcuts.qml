@@ -6,6 +6,9 @@ import QtQuick.Layouts
 ColumnLayout {
     id: root
     spacing: 12
+    // The list keeps its minimum slice and the edit form its full height; the
+    // settings window scrolls the page when it is shorter than this.
+    readonly property real minimumPageHeight: implicitHeight
     property var editing: null
     property string formError: ""
     onEditingChanged: ShortcutsState.editingForm=!!editing
@@ -44,7 +47,7 @@ ColumnLayout {
     SettingsCard {
         Layout.fillWidth:true;visible:!!root.editing
         GridLayout {
-            Layout.fillWidth:true;columns:2;columnSpacing:12;rowSpacing:8
+            Layout.fillWidth:true;columns:root.width<520?1:2;columnSpacing:12;rowSpacing:8
             TextField {id:titleField;palette.base:Session.surface;palette.button:Session.surface;palette.text:Session.foreground;palette.buttonText:Session.foreground;palette.highlight:Session.accent;palette.highlightedText:Session.background;Layout.fillWidth:true;placeholderText:"Название действия";maximumLength:160;color:Session.foreground;Accessible.name:"Название горячей клавиши"}
             TextField {id:keyField;palette.base:Session.surface;palette.button:Session.surface;palette.text:Session.foreground;palette.buttonText:Session.foreground;palette.highlight:Session.accent;palette.highlightedText:Session.background;Layout.fillWidth:true;placeholderText:"SUPER + SHIFT + E";maximumLength:100;color:Session.foreground;Accessible.name:"Сочетание клавиш"}
             ComboBox {id:actionSelect;palette.base:Session.surface;palette.button:Session.surface;palette.text:Session.foreground;palette.buttonText:Session.foreground;palette.highlight:Session.accent;palette.highlightedText:Session.background;Layout.fillWidth:true;model:ShortcutsState.actions;textRole:"title";Accessible.name:"Действие горячей клавиши"}
@@ -52,7 +55,7 @@ ColumnLayout {
             ComboBox {id:globalSelect;palette.base:Session.surface;palette.button:Session.surface;palette.text:Session.foreground;palette.buttonText:Session.foreground;palette.highlight:Session.accent;palette.highlightedText:Session.background;Layout.fillWidth:true;visible:root.action==="global";model:ShortcutsState.globals;textRole:"title";Accessible.name:"Раздел оболочки"}
         }
         Text {Layout.fillWidth:true;text:"SUPER — клавиша Windows. Введи сочетание текстом: SUPER + E, CTRL + ALT + F1, Print. Клавиши указываются латиницей.";color:Session.muted;font.family:Session.fontFamily;font.pixelSize:11;wrapMode:Text.Wrap}
-        RowLayout {
+        Flow {
             Layout.fillWidth:true
             CheckBox {id:activeCheck;text:"Включено";palette.windowText:Session.foreground}
             CheckBox {id:repeatCheck;text:"Повтор при удержании";palette.windowText:Session.foreground}

@@ -65,7 +65,8 @@ and [installed file map](repository-layout.md).
 
 ## Optional integrations
 
-For the backed-up Lua appearance include and settings window rules:
+For the backed-up Lua appearance include (it also removes the fixed-size settings
+window rule that earlier versions installed):
 
 ```sh
 ~/.local/bin/poly-shell appearance install

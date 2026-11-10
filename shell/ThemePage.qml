@@ -13,11 +13,19 @@ ColumnLayout {
     readonly property color previewSurface: previewPalette.surface || Session.surface
     readonly property color previewBackground: previewPalette.background || Session.background
     function fileUrl(path: string): string { return "file://" + encodeURI(path).replace(/#/g, "%23").replace(/\?/g, "%3F"); }
+    // Narrow windows put the preview under the collection; the settings window then
+    // scrolls the page when it is shorter than this height.
+    readonly property bool stacked: width < 640
+    readonly property real minimumPageHeight: Math.max(43, footer.implicitHeight) + 1 + spacing * 2
+        + (stacked ? 280 + cards.rowSpacing + previewCard.implicitHeight : Math.max(280, previewCard.implicitHeight))
     spacing: 12
-    RowLayout {
-        Layout.fillWidth: true; Layout.fillHeight: true; spacing: 12
+    GridLayout {
+        id: cards
+        Layout.fillWidth: true; Layout.fillHeight: true; Layout.minimumHeight: 0
+        columns: root.stacked ? 1 : 2; columnSpacing: 12; rowSpacing: 12
         SettingsCard {
-            Layout.fillWidth: true; Layout.fillHeight: true; Layout.preferredWidth: 470
+            // Stacked, the scrolling gallery takes the spare height and the preview keeps its own.
+            Layout.fillWidth: true; Layout.fillHeight: true; Layout.preferredWidth: 470; Layout.minimumHeight: 280; Layout.preferredHeight: root.stacked ? 280 : -1
             padding: 12
             RowLayout {
                 Layout.fillWidth: true; spacing: 9
@@ -77,7 +85,9 @@ ColumnLayout {
             }
         }
         SettingsCard {
-            Layout.preferredWidth: 332; Layout.fillHeight: true; padding: 14
+            id: previewCard
+            Layout.preferredWidth: root.stacked ? -1 : 332; Layout.fillWidth: root.stacked
+            Layout.fillHeight: !root.stacked; Layout.minimumHeight: root.stacked ? implicitHeight : 0; padding: 14
             RowLayout {
                 Layout.fillWidth: true; spacing: 9
                 Icon { name: "monitor"; Layout.preferredWidth: 20; Layout.preferredHeight: 20 }
@@ -155,6 +165,7 @@ ColumnLayout {
     }
     Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: PolyTheme.Theme.color("#4a545d") }
     RowLayout {
+        id: footer
         Layout.fillWidth: true; Layout.preferredHeight: 43; spacing: 10
         Icon { name: ThemeState.dirty ? "note" : "check"; Layout.preferredWidth: 18; Layout.preferredHeight: 18; opacity: 0.7 }
         Text { Layout.fillWidth: true; text: ThemeState.error || ThemeState.message || "Обои и цвета применяются вместе"; color: ThemeState.error ? PolyTheme.Theme.color("#f4b7a0") : Session.muted; font.family: Session.fontFamily; font.pixelSize: 10; wrapMode: Text.Wrap }
